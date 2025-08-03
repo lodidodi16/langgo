@@ -37,7 +37,7 @@
         <li><a href="index.html">Translate</a></li>
         <li><a href="add.html">Vocabulary</a></li>
         <li><a class="active" href="lyrics.html">Lyrics</a></li>
-        <li><a href="flashcard.html">Flashcard></li>
+        <li><a href="flashcard.html">Flashcard</li>
         <li><a href="fact.html">Fact</a></li>
       </ul>
     </nav>
@@ -63,9 +63,9 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
     import {
-      getFirestore, doc, getDoc, collection, setDoc, getDocs, query, where
+      getFirestore, doc, getDoc, setDoc
     } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
-
+  
     const firebaseConfig = {
       apiKey: "AIzaSyCY685VUp-3SDJZcfbIwRFD20QXKIvyuD8",
       authDomain: "langgo-4bb3a.firebaseapp.com",
@@ -75,17 +75,17 @@
       appId: "1:741690694912:web:027b883b74e5fe217ca7e5",
       measurementId: "G-ZFSJ67X5WF"
     };
-
+  
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-
+  
     const params = new URLSearchParams(window.location.search);
     const id = params.get("id");
     let originalText = "";
-
+  
     const titleEl = document.getElementById("lyricTitle");
     const outputDiv = document.getElementById("translatedWords");
-
+  
     const fetchLyric = async () => {
       const docRef = doc(db, "lyrics", id);
       const docSnap = await getDoc(docRef);
@@ -93,91 +93,133 @@
         const data = docSnap.data();
         titleEl.innerText = data.title;
         originalText = data.content.trim();
-        translateLyrics(); // Auto translate once loaded
+        translateLyrics();
       } else {
         titleEl.innerText = "Not Found";
         originalText = "";
       }
     };
-
+  
     window.translateLyrics = async () => {
       const from = document.getElementById("fromLang").value;
       const to = document.getElementById("toLang").value;
       outputDiv.innerHTML = "";
-
+  
       const paragraphs = originalText.split(/\n+/);
-
+  
       for (let para of paragraphs) {
         const paraDiv = document.createElement("div");
         paraDiv.style.marginBottom = "16px";
-
+  
         const words = para.trim().split(/\s+/);
-
+  
         for (let word of words) {
           const cleanWord = word.toLowerCase().replace(/[^a-zA-Z가-힣]/g, "");
-          const q = query(collection(db, "translations"), where(from, "==", cleanWord));
-          const snapshot = await getDocs(q);
-
+          const docRef = doc(db, "translations", cleanWord);
+          const docSnap = await getDoc(docRef);
+  
           const span = document.createElement("span");
           span.textContent = word;
+          span.setAttribute("data-word", cleanWord);
           span.style.marginRight = "5px";
-
-          if (!snapshot.empty) {
-            const docData = snapshot.docs[0].data();
+  
+          if (docSnap.exists()) {
+            const docData = docSnap.data();
             span.title = docData[to] || "-";
-
+  
             const box = document.createElement("div");
             box.className = "translation-box";
-
+  
             let allTranslations = "";
             for (const [lang, value] of Object.entries(docData)) {
               allTranslations += `<strong>${lang.toUpperCase()}</strong>: ${value}<br/>`;
             }
             box.innerHTML = allTranslations;
-
+  
             span.onclick = () => {
               box.style.display = box.style.display === "none" ? "block" : "none";
             };
-
+  
             paraDiv.appendChild(span);
             paraDiv.appendChild(box);
           } else {
             span.classList.add("not-found");
-
+  
             const addBox = document.createElement("div");
             addBox.className = "translation-box";
             addBox.innerHTML = `
-              <small>No translation. Add:</small><br/>
-              <input type="text" placeholder="${to} translation" id="add-${cleanWord}" />
-              <button onclick="addTranslation('${cleanWord}', '${from}', '${to}')">Add</button>
+              <small>No translation. Add for all languages:</small><br/>
+              <input type="text" placeholder="English" id="add-en-${cleanWord}" /><br/>
+              <input type="text" placeholder="Malay" id="add-ms-${cleanWord}" /><br/>
+              <input type="text" placeholder="Korean" id="add-ko-${cleanWord}" /><br/>
+              <button onclick="addTranslationMulti('${cleanWord}')">Add All</button>
             `;
-
+  
             span.onclick = () => {
               addBox.style.display = addBox.style.display === "none" ? "block" : "none";
             };
-
+  
             paraDiv.appendChild(span);
             paraDiv.appendChild(addBox);
           }
         }
-
+  
         outputDiv.appendChild(paraDiv);
       }
     };
-
-    window.addTranslation = async (word, from, to) => {
-      const input = document.getElementById(`add-${word}`);
-      const value = input.value.trim();
-      if (!value) return alert("Translation is empty.");
-
-      const docRef = doc(db, "translations", word); // Use word as doc ID
-      await setDoc(docRef, { [from]: word, [to]: value }, { merge: true });
-
-      alert("✅ Translation added.");
-      translateLyrics(); // Re-run translation to update display
+  
+    window.addTranslationMulti = async (word) => {
+      const langs = ["en", "ms", "ko"];
+      const data = {};
+  
+      for (const lang of langs) {
+        const input = document.getElementById(`add-${lang}-${word}`);
+        const value = input?.value?.trim();
+        if (value) {
+          data[lang] = value;
+        }
+      }
+  
+      const from = document.getElementById("fromLang").value;
+      const to = document.getElementById("toLang").value;
+  
+      if (!data[from]) {
+        data[from] = word;
+      }
+  
+      const docRef = doc(db, "translations", word);
+      await setDoc(docRef, data, { merge: true });
+  
+      const span = document.querySelector(`span[data-word="${word}"]`);
+      const box = span?.nextElementSibling;
+  
+      if (span && box) {
+        span.classList.remove("not-found");
+        span.title = data[to] || "-";
+  
+        let newContent = "";
+        for (const [lang, value] of Object.entries(data)) {
+          newContent += `<strong>${lang.toUpperCase()}</strong>: ${value}<br/>`;
+        }
+  
+        box.innerHTML = newContent;
+      }
     };
-
+  
     fetchLyric();
-  </script>
+  
+    // Close translation boxes when clicking outside
+    document.addEventListener("click", (e) => {
+      const isInsideSpan = e.target.closest("span[data-word]");
+      const isInsideBox = e.target.closest(".translation-box");
+  
+      if (!isInsideSpan && !isInsideBox) {
+        document.querySelectorAll(".translation-box").forEach(box => {
+          box.style.display = "none";
+        });
+      }
+    });
+  </script>  
+  
 </body>
 </html>
