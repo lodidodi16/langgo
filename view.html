@@ -123,18 +123,33 @@
           span.setAttribute("data-word", cleanWord);
           span.style.marginRight = "5px";
   
+          const box = document.createElement("div");
+          box.className = "translation-box";
+  
           if (docSnap.exists()) {
             const docData = docSnap.data();
             span.title = docData[to] || "-";
   
-            const box = document.createElement("div");
-            box.className = "translation-box";
-  
-            let allTranslations = "";
+            let displayTranslations = "";
+            let editTranslations = "";
             for (const [lang, value] of Object.entries(docData)) {
-              allTranslations += `<strong>${lang.toUpperCase()}</strong>: ${value}<br/>`;
+              displayTranslations += `<strong>${lang.toUpperCase()}</strong>: ${value}<br/>`;
+              editTranslations += `
+                <label><strong>${lang.toUpperCase()}</strong>: 
+                  <input type="text" id="edit-${lang}-${cleanWord}" value="${value}" />
+                </label><br/>
+              `;
             }
-            box.innerHTML = allTranslations;
+  
+            const editBoxId = `edit-box-${cleanWord}`;
+            box.innerHTML = `
+              <div class="view-mode">${displayTranslations}</div>
+              <button onclick="toggleEditBox('${editBoxId}', this)">Edit</button>
+              <div class="edit-mode" id="${editBoxId}" style="display:none;">
+                ${editTranslations}
+                <button onclick="editTranslation('${cleanWord}')">Save</button>
+              </div>
+            `;
   
             span.onclick = () => {
               box.style.display = box.style.display === "none" ? "block" : "none";
@@ -165,6 +180,44 @@
         }
   
         outputDiv.appendChild(paraDiv);
+      }
+    };
+  
+    window.toggleEditBox = (id, btn) => {
+      const box = document.getElementById(id);
+      if (box.style.display === "none") {
+        box.style.display = "block";
+        btn.textContent = "Cancel";
+      } else {
+        box.style.display = "none";
+        btn.textContent = "Edit";
+      }
+    };
+  
+    window.editTranslation = async (word) => {
+      const langs = ["en", "ms", "ko"];
+      const updates = {};
+  
+      langs.forEach(lang => {
+        const input = document.getElementById(`edit-${lang}-${word}`);
+        if (input && input.value.trim()) {
+          updates[lang] = input.value.trim();
+        }
+      });
+  
+      if (Object.keys(updates).length > 0) {
+        const docRef = doc(db, "translations", word);
+        await setDoc(docRef, updates, { merge: true });
+        alert("✅ Translation updated!");
+  
+        const span = document.querySelector(`span[data-word="${word}"]`);
+        const toLang = document.getElementById("toLang").value;
+        if (span && updates[toLang]) {
+          span.title = updates[toLang];
+        }
+  
+        const editBox = document.getElementById(`edit-box-${word}`);
+        if (editBox) editBox.style.display = "none";
       }
     };
   
@@ -202,13 +255,23 @@
           newContent += `<strong>${lang.toUpperCase()}</strong>: ${value}<br/>`;
         }
   
-        box.innerHTML = newContent;
+        box.innerHTML = `
+          <div class="view-mode">${newContent}</div>
+          <button onclick="toggleEditBox('edit-box-${word}', this)">Edit</button>
+          <div class="edit-mode" id="edit-box-${word}" style="display:none;">
+            ${langs.map(lang => `
+              <label><strong>${lang.toUpperCase()}</strong>: 
+                <input type="text" id="edit-${lang}-${word}" value="${data[lang] || ""}" />
+              </label><br/>
+            `).join("")}
+            <button onclick="editTranslation('${word}')">Save</button>
+          </div>
+        `;
       }
     };
   
     fetchLyric();
   
-    // Close translation boxes when clicking outside
     document.addEventListener("click", (e) => {
       const isInsideSpan = e.target.closest("span[data-word]");
       const isInsideBox = e.target.closest(".translation-box");
