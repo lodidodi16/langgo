@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LangGo | Lyrics List</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .content {
+      flex: 1;
+      padding: 30px;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+
+    #lyricsList {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    #lyricsList li {
+      background-color: #fff6bf;
+      padding: 16px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      transition: background 0.3s, transform 0.2s;
+    }
+
+    #lyricsList li:hover {
+      background-color: #ffe066;
+      transform: translateY(-2px);
+    }
+
+    #lyricsList li a {
+      text-decoration: none;
+      font-weight: bold;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #lyricsList li a::before {
+      content: "🎵";
+      font-size: 18px;
+    }
+
+    input[type="text"], textarea, select {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    button {
+      background-color: #ffd43b;
+      border: none;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background-color: #fab005;
+    }
+
+    .filters {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .filters input[type="text"] {
+      flex: 1;
+    }
+
+    .filters select {
+      width: 180px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav class="sidebar">
+      <h2>LangGo</h2>
+      <ul>
+        <li><a href="index.html">Translate</a></li>
+        <li><a href="add.html">Vocabulary</a></li>
+        <li><a class="active" href="lyrics.html">Lyrics</a></li>
+        <li><a href="flashcard.html">Flashcard</a></li>
+        <li><a href="fact.html">Fact</a></li>
+      </ul>
+    </nav>
+    <main class="content">
+      <h1>🎧 Saved Lyrics</h1>
+
+      <div class="card">
+        <!-- 🔍 Filters -->
+        <div class="filters">
+          <input type="text" id="searchInput" placeholder="Search lyrics title..." oninput="filterLyrics()" />
+          <select id="filterCategory" onchange="filterLyrics()">
+            <option value="">All Categories</option>
+            <option value="Pop">Pop</option>
+            <option value="K-pop">K-pop</option>
+            <option value="J-Rock">J-Rock</option>
+            <option value="Ballad">Ballad</option>
+            <option value="Indie">Indie</option>
+          </select>
+        </div>
+
+        <ul id="lyricsList"></ul>
+      </div>
+
+      <!-- Add New Lyric -->
+      <div class="card" style="margin-top: 20px;">
+        <h3>Add New Lyric</h3>
+        <input type="text" id="lyricTitle" placeholder="Lyric Title" />
+        <textarea id="lyricContent" placeholder="Enter full lyrics here..."></textarea>
+        <select id="lyricCategory">
+          <option value="">Select Category</option>
+          <option value="Pop">Pop</option>
+          <option value="K-pop">K-pop</option>
+          <option value="J-Rock">J-Rock</option>
+          <option value="Ballad">Ballad</option>
+          <option value="Indie">Indie</option>
+        </select>
+        <button onclick="addLyric()">💾 Save Lyric</button>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+    import {
+      getFirestore, collection, doc, setDoc, getDocs
+    } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCY685VUp-3SDJZcfbIwRFD20QXKIvyuD8",
+      authDomain: "langgo-4bb3a.firebaseapp.com",
+      projectId: "langgo-4bb3a",
+      storageBucket: "langgo-4bb3a.appspot.com",
+      messagingSenderId: "741690694912",
+      appId: "1:741690694912:web:027b883b74e5fe217ca7e5",
+      measurementId: "G-ZFSJ67X5WF"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    let allLyrics = [];
+
+    async function loadLyrics() {
+      const querySnapshot = await getDocs(collection(db, "lyrics"));
+      allLyrics = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        allLyrics.push({ id: doc.id, ...data });
+      });
+      filterLyrics();
+    }
+
+    window.filterLyrics = () => {
+      const keyword = document.getElementById("searchInput").value.trim().toLowerCase();
+      const category = document.getElementById("filterCategory").value;
+      const list = document.getElementById("lyricsList");
+      list.innerHTML = "";
+
+      const filtered = allLyrics.filter(item => {
+        const matchTitle = item.title.toLowerCase().includes(keyword);
+        const matchCategory = !category || item.category === category;
+        return matchTitle && matchCategory;
+      });
+
+      filtered.forEach(item => {
+        const li = document.createElement("li");
+        li.innerHTML = `<a href="view.html?id=${item.id}">${item.title} <small style="font-size: 12px; color: #888;">(${item.category})</small></a>`;
+        list.appendChild(li);
+      });
+    };
+
+    window.addLyric = async () => {
+      const title = document.getElementById("lyricTitle").value.trim();
+      const content = document.getElementById("lyricContent").value.trim();
+      const category = document.getElementById("lyricCategory").value;
+
+      if (!title || !content || !category) {
+        return alert("Please fill in all fields, including category.");
+      }
+
+      const id = title.toLowerCase().replace(/\s+/g, "_");
+
+      try {
+        await setDoc(doc(db, "lyrics", id), { title, content, category });
+        alert("✅ Lyric saved!");
+        document.getElementById("lyricTitle").value = "";
+        document.getElementById("lyricContent").value = "";
+        document.getElementById("lyricCategory").value = "";
+        loadLyrics();
+      } catch (e) {
+        console.error("❌ Error saving lyric:", e);
+        alert("❌ Failed to save lyric.");
+      }
+    };
+
+    loadLyrics();
+  </script>
+</body>
+</html>

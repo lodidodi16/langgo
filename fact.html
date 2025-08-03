@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LangGo | Global Facts</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .content {
+      flex: 1;
+      padding: 40px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    form {
+      background: #fff0c1;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 40px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    form input, form select, form textarea, form button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    form button {
+      background-color: #ffd43b;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 16px;
+      border: none;
+    }
+
+    .filters {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"], select {
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    .fact-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .fact-item {
+      background: #fff6bf;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .fact-item:hover {
+      transform: scale(1.02);
+    }
+
+    .fact-category {
+      font-size: 13px;
+      color: #777;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav class="sidebar">
+      <h2>LangGo</h2>
+      <ul>
+        <li><a href="index.html">Translate</a></li>
+        <li><a href="add.html">Vocabulary</a></li>
+        <li><a href="lyrics.html">Lyrics</a></li>
+        <li><a href="flashcard.html">Flashcard</a></li>
+        <li><a class="active" href="fact.html">Fact</a></li>
+      </ul>
+    </nav>
+
+    <main class="content">
+      <h1>🌍 Add & Explore Global Facts</h1>
+
+      <!-- Add Fact Form -->
+      <form id="factForm">
+        <input type="text" id="title" placeholder="Title" required />
+        <textarea id="content" rows="4" placeholder="Fact content..." required></textarea>
+        <select id="category" required>
+          <option value="">Select Category</option>
+          <option value="Science">Science</option>
+          <option value="Language">Language</option>
+          <option value="History">History</option>
+          <option value="Culture">Culture</option>
+        </select>
+        <button type="submit">➕ Add Fact</button>
+      </form>
+
+      <!-- Filters -->
+      <div class="filters">
+        <input type="text" id="searchBox" placeholder="Search facts...">
+        <select id="categoryFilter">
+          <option value="">All Categories</option>
+          <option value="Science">Science</option>
+          <option value="Language">Language</option>
+          <option value="History">History</option>
+          <option value="Culture">Culture</option>
+        </select>
+      </div>
+
+      <!-- Fact List -->
+      <div id="factList" class="fact-list"></div>
+    </main>
+  </div>
+
+  <!-- Firebase JS -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+    import {
+      getFirestore, collection, getDocs, addDoc
+    } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCY685VUp-3SDJZcfbIwRFD20QXKIvyuD8",
+      authDomain: "langgo-4bb3a.firebaseapp.com",
+      projectId: "langgo-4bb3a",
+      storageBucket: "langgo-4bb3a.appspot.com",
+      messagingSenderId: "741690694912",
+      appId: "1:741690694912:web:027b883b74e5fe217ca7e5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const factList = document.getElementById("factList");
+    const searchBox = document.getElementById("searchBox");
+    const categoryFilter = document.getElementById("categoryFilter");
+
+    const factForm = document.getElementById("factForm");
+    const titleInput = document.getElementById("title");
+    const contentInput = document.getElementById("content");
+    const categoryInput = document.getElementById("category");
+
+    let facts = [];
+
+    async function loadFacts() {
+      const snapshot = await getDocs(collection(db, "facts"));
+      facts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      displayFacts();
+    }
+
+    function displayFacts() {
+  const keyword = searchBox.value.toLowerCase();
+  const category = categoryFilter.value;
+
+  factList.innerHTML = "";
+  facts
+    .filter(f =>
+      f.title.toLowerCase().includes(keyword) &&
+      (category === "" || f.category === category)
+    )
+    .forEach(f => {
+      const div = document.createElement("div");
+      div.className = "fact-item";
+      div.innerHTML = `<strong>${f.title}</strong><div class="fact-category">#${f.category}</div>`;
+      div.onclick = () => window.location.href = `factview.html?id=${f.id}`;
+      factList.appendChild(div);
+    });
+}
+
+    searchBox.addEventListener("input", displayFacts);
+    categoryFilter.addEventListener("change", displayFacts);
+
+    factForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const newFact = {
+        title: titleInput.value.trim(),
+        content: contentInput.value.trim(),
+        category: categoryInput.value,
+      };
+
+      if (newFact.title && newFact.content && newFact.category) {
+        await addDoc(collection(db, "facts"), newFact);
+        titleInput.value = "";
+        contentInput.value = "";
+        categoryInput.value = "";
+        await loadFacts();
+      }
+    });
+
+    loadFacts();
+  </script>
+</body>
+</html>

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LangGo | Flashcards</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+   
+    main.content {
+      flex: 1;
+      padding: 40px;
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    select {
+      padding: 8px 12px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    .flashcard {
+      width: 180px;
+      height: 180px;
+      margin: 0 auto 20px;
+      perspective: 1000px;
+    }
+
+    .card-inner {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transition: transform 0.6s;
+      transform-style: preserve-3d;
+      cursor: pointer;
+    }
+
+    .flashcard.flipped .card-inner {
+      transform: rotateY(180deg);
+    }
+
+    .card-front, .card-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      background: #fff6bf;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .card-back {
+      transform: rotateY(180deg);
+      background: #ffd43b;
+      flex-direction: column;
+      color: #333;
+    }
+
+    button {
+      background-color: #ffe066;
+      border: none;
+      padding: 8px 14px;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 4px;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #ffdd57;
+    }
+
+    #score {
+      font-size: 16px;
+      margin-top: 10px;
+    }
+
+    .answers, .controls {
+      margin-top: 20px;
+    }
+
+    .info-bar {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav class="sidebar">
+      <h2>LangGo</h2>
+      <ul>
+        <li><a href="index.html">Translate</a></li>
+        <li><a href="add.html">Vocabulary</a></li>
+        <li><a href="lyrics.html">Lyrics</a></li>
+        <li><a class="active" href="flashcard.html">Flashcard</a></li>
+        <li><a href="fact.html">Fact</a></li>
+      </ul>
+    </nav>
+
+    <main class="content">
+      <h1>📚 Flashcard Quiz</h1>
+      <select id="sourceLang">
+        <option value="en">English</option>
+        <option value="ms">Malay</option>
+        <option value="ko">Korean</option>
+      </select>
+
+      <div class="flashcard" id="card">
+        <div class="card-inner">
+          <div class="card-front" id="cardFront">Word</div>
+          <div class="card-back" id="cardBack">Translations</div>
+        </div>
+      </div>
+      <br>
+
+      <div class="answers">
+        <button onclick="nextCard()">Next</button>
+        <button onclick="increaseScore()">Correct</button>
+      </div>
+
+      <div class="controls">
+        <button onclick="toggleShuffle()">🔀 Shuffle: <span id="shuffleStatus">Off</span></button>
+        <button onclick="toggleSession()"><span id="sessionBtn">Stop</span> Session</button>
+      </div>
+
+      <div class="info-bar">
+        <div id="progress">Progress: 0 / 0</div>
+        <div id="timer">⏱️ Time: 0s</div>
+        <div id="score">Score: 0</div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCY685VUp-3SDJZcfbIwRFD20QXKIvyuD8",
+      authDomain: "langgo-4bb3a.firebaseapp.com",
+      projectId: "langgo-4bb3a",
+      storageBucket: "langgo-4bb3a.appspot.com",
+      messagingSenderId: "741690694912",
+      appId: "1:741690694912:web:027b883b74e5fe217ca7e5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    let translations = [];
+    let currentCard = null;
+    let score = 0;
+    let cardIndex = 0;
+    let isShuffle = false;
+    let isSessionRunning = true;
+    let timer = 0;
+    let interval;
+
+    const front = document.getElementById("cardFront");
+    const back = document.getElementById("cardBack");
+    const scoreEl = document.getElementById("score");
+    const cardEl = document.getElementById("card");
+    const progressEl = document.getElementById("progress");
+    const shuffleEl = document.getElementById("shuffleStatus");
+    const timerEl = document.getElementById("timer");
+    const sessionBtn = document.getElementById("sessionBtn");
+    const sourceLang = document.getElementById("sourceLang");
+
+    sourceLang.addEventListener("change", nextCard);
+    cardEl.addEventListener("click", flipCard);
+
+    function flipCard() {
+      cardEl.classList.toggle("flipped");
+    }
+
+    function increaseScore() {
+      if (!isSessionRunning) return;
+      score++;
+      updateScore();
+      nextCard();
+    }
+
+    function resetScore() {
+      score = 0;
+      updateScore();
+    }
+
+    function updateScore() {
+      scoreEl.textContent = `Score: ${score}`;
+    }
+
+    function toggleShuffle() {
+      isShuffle = !isShuffle;
+      shuffleEl.textContent = isShuffle ? "On" : "Off";
+    }
+
+    function toggleSession() {
+      isSessionRunning = !isSessionRunning;
+      sessionBtn.textContent = isSessionRunning ? "Stop" : "Start";
+      if (isSessionRunning) {
+        startTimer();
+        nextCard();
+      } else {
+        clearInterval(interval);
+      }
+    }
+
+    function updateProgress() {
+      progressEl.textContent = `Progress: ${cardIndex + 1} / ${translations.length}`;
+    }
+
+    function updateTimer() {
+      timer++;
+      timerEl.textContent = `⏱️ Time: ${timer}s`;
+    }
+
+    function startTimer() {
+      clearInterval(interval);
+      timer = 0;
+      interval = setInterval(updateTimer, 1000);
+    }
+
+    function getRandomCard() {
+      const lang = sourceLang.value;
+      if (translations.length === 0) return;
+
+      if (isShuffle) {
+        currentCard = translations[Math.floor(Math.random() * translations.length)];
+      } else {
+        currentCard = translations[cardIndex % translations.length];
+        cardIndex++;
+      }
+
+      front.textContent = currentCard[lang] || "N/A";
+      back.innerHTML = `
+        🇬🇧 ${currentCard.en || '-'}<br>
+        🇲🇾 ${currentCard.ms || '-'}<br>
+        🇰🇷 ${currentCard.ko || '-'}
+      `;
+      updateProgress();
+      cardEl.classList.remove("flipped");
+    }
+
+    async function loadTranslations() {
+      const snapshot = await getDocs(collection(db, "translations"));
+      translations = snapshot.docs.map(doc => doc.data());
+      cardIndex = 0;
+      score = 0;
+      updateScore();
+      startTimer();
+      nextCard();
+    }
+
+    function nextCard() {
+      if (!isSessionRunning) return;
+      getRandomCard();
+    }
+
+    // Expose functions to global for HTML onclick
+    window.flipCard = flipCard;
+    window.nextCard = nextCard;
+    window.increaseScore = increaseScore;
+    window.resetScore = resetScore;
+    window.toggleShuffle = toggleShuffle;
+    window.toggleSession = toggleSession;
+
+    loadTranslations();
+  </script>
+</body>
+</html>

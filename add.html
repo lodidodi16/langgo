@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LangGo | Add Word</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    #searchInput {
+      margin-top: 20px;
+      padding: 12px;
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .word-card {
+      background: #fffbea;
+      border: 1px solid #ffe066;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      transition: all 0.2s ease-in-out;
+    }
+
+    .word-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .word-entry {
+      display: flex;
+      justify-content: space-between;
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .word-entry span {
+      flex: 1;
+      padding: 0 10px;
+      word-break: break-word;
+    }
+
+    .word-entry span::before {
+      content: "• ";
+      color: #f59e0b;
+    }
+
+    .section-title {
+      margin-top: 30px;
+      margin-bottom: 10px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav class="sidebar">
+      <h2>LangGo</h2>
+      <ul>
+        <li><a href="index.html">Translate</a></li>
+        <li><a class="active" href="add.html">Vocabulary</a></li>
+        <li><a href="lyrics.html">Lyrics</a></li>
+        <li><a href="flashcard.html">Flashcard</a></li>
+        <li><a href="fact.html">Fact</a></li>
+      </ul>
+    </nav>
+    <main class="content">
+      <h1>Add Word</h1>
+      <div class="card">
+        <input type="text" id="wordEn" placeholder="English (eat)" />
+        <input type="text" id="wordMs" placeholder="Malay (makan)" />
+        <input type="text" id="wordKo" placeholder="Korean (먹다)" />
+        <button onclick="addWord()">Add Vocabulary</button>
+      </div>
+
+      <h2 class="section-title">🧾 Vocabulary List</h2>
+      <input type="text" id="searchInput" placeholder="Search words..." />
+
+      <div id="vocabList"></div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+    import {
+      getFirestore, collection, doc, setDoc, getDoc, getDocs
+    } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCY685VUp-3SDJZcfbIwRFD20QXKIvyuD8",
+      authDomain: "langgo-4bb3a.firebaseapp.com",
+      projectId: "langgo-4bb3a",
+      storageBucket: "langgo-4bb3a.appspot.com",
+      messagingSenderId: "741690694912",
+      appId: "1:741690694912:web:027b883b74e5fe217ca7e5",
+      measurementId: "G-ZFSJ67X5WF"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const vocabList = document.getElementById("vocabList");
+    const searchInput = document.getElementById("searchInput");
+
+    window.addWord = async () => {
+      const en = document.getElementById("wordEn").value.trim().toLowerCase();
+      const ms = document.getElementById("wordMs").value.trim().toLowerCase();
+      const ko = document.getElementById("wordKo").value.trim();
+
+      if (!en || !ms || !ko) {
+        alert("⚠️ Please fill in all fields.");
+        return;
+      }
+
+      const docRef = doc(db, "translations", en);
+
+      const existing = await getDoc(docRef);
+      if (existing.exists()) {
+        alert(`⚠️ Word "${en}" already exists.`);
+        return;
+      }
+
+      try {
+        await setDoc(docRef, { en, ms, ko });
+        alert("✅ Word added!");
+        document.getElementById("wordEn").value = "";
+        document.getElementById("wordMs").value = "";
+        document.getElementById("wordKo").value = "";
+        loadWords();
+      } catch (error) {
+        console.error("❌ Error:", error);
+        alert("Failed to add word.");
+      }
+    };
+
+    async function loadWords() {
+      vocabList.innerHTML = "";
+      const snapshot = await getDocs(collection(db, "translations"));
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const div = document.createElement("div");
+        div.className = "word-card";
+        div.innerHTML = `
+          <div class="word-entry">
+            <span><strong>EN:</strong> ${data.en}</span>
+            <span><strong>MS:</strong> ${data.ms}</span>
+            <span><strong>KO:</strong> ${data.ko}</span>
+          </div>
+        `;
+        vocabList.appendChild(div);
+      });
+    }
+
+    searchInput.addEventListener("input", () => {
+      const filter = searchInput.value.toLowerCase();
+      const cards = vocabList.querySelectorAll(".word-card");
+      cards.forEach(card => {
+        const text = card.innerText.toLowerCase();
+        card.style.display = text.includes(filter) ? "" : "none";
+      });
+    });
+
+    loadWords();
+  </script>
+</body>
+</html>

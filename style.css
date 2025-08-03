@@ -1,0 +1,179 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #ffffff;
+    color: #333;
+  }
+  
+  .container {
+    display: flex;
+    min-height: 100vh;
+  }
+  
+  .sidebar {
+    width: 220px;
+    background: #FFD700;
+    color: #222;
+    padding: 2rem 1.5rem;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+  }
+  
+  .sidebar h2 {
+    margin: 0 0 2rem;
+    font-size: 1.8rem;
+    color: #000;
+  }
+  
+  .sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .sidebar a {
+    display: block;
+    text-decoration: none;
+    color: #333;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    transition: background 0.3s;
+  }
+  
+  .sidebar a:hover,
+  .sidebar a.active {
+    background-color: #f0c000;
+    color: #000;
+    font-weight: 600;
+  }
+  
+  .content {
+    flex: 1;
+    padding: 2rem;
+    background: #f9f9f9;
+  }
+  
+  h1 {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .card {
+    background: #ffffff;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    max-width: 600px;
+  }
+  
+  input,
+  textarea,
+  select,
+  button {
+    font-size: 1rem;
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    margin-bottom: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  textarea {
+    height: 100px;
+    resize: vertical;
+  }
+  
+  button {
+    background-color: #FFD700;
+    color: #000;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  
+  button:hover {
+    background-color: #e0b400;
+  }
+  
+  .output {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  
+  .output span {
+    background: #f4f4f4;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+  }
+  
+  .language-select {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .swap {
+    font-size: 1.5rem;
+    user-select: none;
+    color: #888;
+  }
+
+  #translatedWords {
+    margin-top: 15px;
+    line-height: 2.2em;
+  }
+  
+  .word-wrapper {
+    display: inline-block;
+    position: relative;
+    margin-right: 10px;
+  }
+  
+  .word {
+    background: #fff5c2;
+    border: 1px solid #ffe066;
+    border-radius: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  
+  .word:hover {
+    background: #ffe066;
+  }
+  
+  .tooltip {
+    position: absolute;
+    top: 120%;
+    left: 0;
+    background: #333;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.85em;
+    white-space: nowrap;
+    z-index: 100;
+    opacity: 0.95;
+  }
+
+  .tooltip input {
+    font-size: 0.85em;
+    border-radius: 5px;
+    border: none;
+  }
+  
+  .tooltip button {
+    font-size: 0.8em;
+    background: #ffe066;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  

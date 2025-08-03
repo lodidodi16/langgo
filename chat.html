@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>LangGo | AI Chat (Offline)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #fffbe6;
+      margin: 0;
+    }
+
+    .container {
+      display: flex;
+    }
+
+    .chat-area {
+      flex: 1;
+      padding: 40px;
+    }
+
+    .chat-box {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 20px;
+      max-width: 700px;
+      margin: auto;
+    }
+
+    .messages {
+      max-height: 400px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+    }
+
+    .message {
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      border-radius: 10px;
+    }
+
+    .user-message {
+      background: #ffd43b;
+      align-self: flex-end;
+    }
+
+    .ai-message {
+      background: #f1f1f1;
+    }
+
+    textarea {
+      width: 100%;
+      border-radius: 10px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      resize: none;
+    }
+
+    button {
+      background: #ffd43b;
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    nav.sidebar {
+      width: 200px;
+      background: #fff3b0;
+      padding: 20px;
+      height: 100vh;
+      box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+    }
+
+    nav.sidebar h2 {
+      margin-top: 0;
+      color: #333;
+    }
+
+    nav.sidebar ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    nav.sidebar li {
+      margin-bottom: 10px;
+    }
+
+    nav.sidebar a {
+      color: #333;
+      text-decoration: none;
+    }
+
+    nav.sidebar a.active {
+      font-weight: bold;
+      color: #f59f00;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav class="sidebar">
+      <h2>LangGo</h2>
+      <ul>
+        <li><a href="index.html">Translate</a></li>
+        <li><a href="add.html">Vocabulary</a></li>
+        <li><a href="lyrics.html">Lyrics</a></li>
+        <li><a href="fact.html">Facts</a></li>
+        <li><a href="flashcard.html">Flashcard</a></li>
+        <li><a class="active" href="chat.html">AI Chat</a></li>
+      </ul>
+    </nav>
+
+    <main class="chat-area">
+      <div class="chat-box">
+        <div class="messages" id="messages"></div>
+        <textarea id="userInput" rows="3" placeholder="Ask me anything..."></textarea>
+        <button onclick="sendMessage()">Send</button>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function sendMessage() {
+      const userInput = document.getElementById("userInput");
+      const messagesDiv = document.getElementById("messages");
+      const message = userInput.value.trim();
+      if (!message) return;
+
+      // Show user message
+      const userMsgDiv = document.createElement("div");
+      userMsgDiv.className = "message user-message";
+      userMsgDiv.innerText = message;
+      messagesDiv.appendChild(userMsgDiv);
+
+      userInput.value = "";
+
+      // Generate bot response
+      const aiMsgDiv = document.createElement("div");
+      aiMsgDiv.className = "message ai-message";
+      aiMsgDiv.innerText = generateBotReply(message);
+      messagesDiv.appendChild(aiMsgDiv);
+
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function generateBotReply(input) {
+      const msg = input.toLowerCase();
+      if (msg.includes("hello") || msg.includes("hi")) {
+        return "Hi there! How can I help you today?";
+      } else if (msg.includes("name")) {
+        return "My name is LangGo AI!";
+      } else if (msg.includes("translate")) {
+        return "Please visit the Translate page to use our translation tool.";
+      } else if (msg.includes("bye")) {
+        return "Goodbye! Have a great day!";
+      } else if (msg.includes("thank")) {
+        return "You're welcome!";
+      } else if (msg.includes("how are you")) {
+        return "I'm just a bot, but I'm doing great!";
+      } else {
+        return "Sorry, I don't understand that yet.";
+      }
+    }
+  </script>
+</body>
+</html>

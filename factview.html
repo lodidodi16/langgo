@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LangGo | Fact View</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    .content {
+      flex: 1;
+      padding: 40px;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    #factDisplay {
+      background: #fffbea;
+      border: 1px solid #ddd;
+      padding: 20px;
+      border-radius: 12px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+
+    .word {
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 6px;
+    }
+
+    .word:hover {
+      background-color: #ffe066;
+    }
+
+    #translationBox {
+      margin-top: 20px;
+      background: #f8f8ff;
+      padding: 15px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav class="sidebar">
+      <h2>LangGo</h2>
+      <ul>
+        <li><a href="index.html">Translate</a></li>
+        <li><a href="add.html">Vocabulary</a></li>
+        <li><a href="lyrics.html">Lyrics</a></li>
+        <li><a class="active" href="fact.html">Facts</a></li>
+      </ul>
+    </nav>
+
+    <main class="content">
+      <h1>🌐 Fact Detail</h1>
+      <div id="factDisplay">Loading...</div>
+      <div id="translationBox"></div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+    import { getFirestore, collection, doc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCY685VUp-3SDJZcfbIwRFD20QXKIvyuD8",
+      authDomain: "langgo-4bb3a.firebaseapp.com",
+      projectId: "langgo-4bb3a",
+      storageBucket: "langgo-4bb3a.appspot.com",
+      messagingSenderId: "741690694912",
+      appId: "1:741690694912:web:027b883b74e5fe217ca7e5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const factDisplay = document.getElementById("factDisplay");
+    const translationBox = document.getElementById("translationBox");
+
+    // Get fact ID from URL
+    const params = new URLSearchParams(window.location.search);
+    const factId = params.get("id");
+
+    // Load and display fact
+    async function loadFact() {
+      if (!factId) {
+        factDisplay.textContent = "No fact selected.";
+        return;
+      }
+
+      const docRef = doc(db, "facts", factId);
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
+        factDisplay.textContent = "Fact not found.";
+        return;
+      }
+
+      const data = docSnap.data();
+      const text = data.content || "";
+
+      // Wrap each word in a span
+      const formatted = text.split(/(\s+)/).map(part => {
+        if (part.trim() === "") return part;
+        return `<span class="word" onclick="translateWord('${part.replace(/'/g, "\\'")}')">${part}</span>`;
+      }).join("");
+
+      factDisplay.innerHTML = formatted;
+    }
+
+    // Make translation function global
+    window.translateWord = async function(word) {
+      const querySnapshot = await getDocs(collection(db, "translations"));
+      let found = false;
+      translationBox.innerHTML = `<strong>Searching for:</strong> ${word}`;
+
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        const all = [data.en, data.ms, data.ko];
+        if (all.includes(word)) {
+          translationBox.innerHTML = `
+            <strong>Word:</strong> ${word}<br>
+            🇬🇧 English: ${data.en}<br>
+            🇲🇾 Malay: ${data.ms}<br>
+            🇰🇷 Korean: ${data.ko}
+          `;
+          found = true;
+        }
+      });
+
+      if (!found) {
+        translationBox.innerHTML = `<strong>Word:</strong> ${word}<br>🔍 No translation found in database.`;
+      }
+    };
+
+    loadFact();
+  </script>
+</body>
+</html>

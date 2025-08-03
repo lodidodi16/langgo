@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LangGo | View Lyrics</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    #translatedWords span {
+      margin: 3px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      display: inline-block;
+      transition: background 0.3s;
+    }
+    #translatedWords span:hover {
+      background: #efefef;
+    }
+    .translation-box {
+      background: #f9f9f9;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-top: 5px;
+      display: none;
+    }
+    .not-found {
+      opacity: 0.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav class="sidebar">
+      <h2>LangGo</h2>
+      <ul>
+        <li><a href="index.html">Translate</a></li>
+        <li><a href="add.html">Vocabulary</a></li>
+        <li><a class="active" href="lyrics.html">Lyrics</a></li>
+        <li><a href="flashcard.html">Flashcard></li>
+        <li><a href="fact.html">Fact</a></li>
+      </ul>
+    </nav>
+    <main class="content">
+      <h1 id="lyricTitle">Loading...</h1>
+      <div class="card">
+        <select id="fromLang">
+          <option value="en">English</option>
+          <option value="ms">Malay</option>
+          <option value="ko">Korean</option>
+        </select>
+        <select id="toLang">
+          <option value="ms">Malay</option>
+          <option value="ko">Korean</option>
+          <option value="en">English</option>
+        </select>
+        <button onclick="translateLyrics()">Translate</button>
+        <div id="translatedWords" style="margin-top: 20px;"></div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+    import {
+      getFirestore, doc, getDoc, collection, setDoc, getDocs, query, where
+    } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCY685VUp-3SDJZcfbIwRFD20QXKIvyuD8",
+      authDomain: "langgo-4bb3a.firebaseapp.com",
+      projectId: "langgo-4bb3a",
+      storageBucket: "langgo-4bb3a.appspot.com",
+      messagingSenderId: "741690694912",
+      appId: "1:741690694912:web:027b883b74e5fe217ca7e5",
+      measurementId: "G-ZFSJ67X5WF"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
+    let originalText = "";
+
+    const titleEl = document.getElementById("lyricTitle");
+    const outputDiv = document.getElementById("translatedWords");
+
+    const fetchLyric = async () => {
+      const docRef = doc(db, "lyrics", id);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        titleEl.innerText = data.title;
+        originalText = data.content.trim();
+        translateLyrics(); // Auto translate once loaded
+      } else {
+        titleEl.innerText = "Not Found";
+        originalText = "";
+      }
+    };
+
+    window.translateLyrics = async () => {
+      const from = document.getElementById("fromLang").value;
+      const to = document.getElementById("toLang").value;
+      outputDiv.innerHTML = "";
+
+      const paragraphs = originalText.split(/\n+/);
+
+      for (let para of paragraphs) {
+        const paraDiv = document.createElement("div");
+        paraDiv.style.marginBottom = "16px";
+
+        const words = para.trim().split(/\s+/);
+
+        for (let word of words) {
+          const cleanWord = word.toLowerCase().replace(/[^a-zA-Z가-힣]/g, "");
+          const q = query(collection(db, "translations"), where(from, "==", cleanWord));
+          const snapshot = await getDocs(q);
+
+          const span = document.createElement("span");
+          span.textContent = word;
+          span.style.marginRight = "5px";
+
+          if (!snapshot.empty) {
+            const docData = snapshot.docs[0].data();
+            span.title = docData[to] || "-";
+
+            const box = document.createElement("div");
+            box.className = "translation-box";
+
+            let allTranslations = "";
+            for (const [lang, value] of Object.entries(docData)) {
+              allTranslations += `<strong>${lang.toUpperCase()}</strong>: ${value}<br/>`;
+            }
+            box.innerHTML = allTranslations;
+
+            span.onclick = () => {
+              box.style.display = box.style.display === "none" ? "block" : "none";
+            };
+
+            paraDiv.appendChild(span);
+            paraDiv.appendChild(box);
+          } else {
+            span.classList.add("not-found");
+
+            const addBox = document.createElement("div");
+            addBox.className = "translation-box";
+            addBox.innerHTML = `
+              <small>No translation. Add:</small><br/>
+              <input type="text" placeholder="${to} translation" id="add-${cleanWord}" />
+              <button onclick="addTranslation('${cleanWord}', '${from}', '${to}')">Add</button>
+            `;
+
+            span.onclick = () => {
+              addBox.style.display = addBox.style.display === "none" ? "block" : "none";
+            };
+
+            paraDiv.appendChild(span);
+            paraDiv.appendChild(addBox);
+          }
+        }
+
+        outputDiv.appendChild(paraDiv);
+      }
+    };
+
+    window.addTranslation = async (word, from, to) => {
+      const input = document.getElementById(`add-${word}`);
+      const value = input.value.trim();
+      if (!value) return alert("Translation is empty.");
+
+      const docRef = doc(db, "translations", word); // Use word as doc ID
+      await setDoc(docRef, { [from]: word, [to]: value }, { merge: true });
+
+      alert("✅ Translation added.");
+      translateLyrics(); // Re-run translation to update display
+    };
+
+    fetchLyric();
+  </script>
+</body>
+</html>
