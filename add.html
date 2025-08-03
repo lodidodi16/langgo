@@ -81,6 +81,9 @@
       <h2 class="section-title">🧾 Vocabulary List</h2>
       <input type="text" id="searchInput" placeholder="Search words..." />
 
+      <p id="vocabCount" style="margin-bottom: 20px; color: #666; font-weight: bold;"></p>
+<div id="vocabList"></div>
+
       <div id="vocabList"></div>
     </main>
   </div>
@@ -90,7 +93,7 @@
     import {
       getFirestore, collection, doc, setDoc, getDoc, getDocs
     } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
-
+  
     const firebaseConfig = {
       apiKey: "AIzaSyCY685VUp-3SDJZcfbIwRFD20QXKIvyuD8",
       authDomain: "langgo-4bb3a.firebaseapp.com",
@@ -100,31 +103,37 @@
       appId: "1:741690694912:web:027b883b74e5fe217ca7e5",
       measurementId: "G-ZFSJ67X5WF"
     };
-
+  
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-
+  
     const vocabList = document.getElementById("vocabList");
     const searchInput = document.getElementById("searchInput");
-
+    const vocabCountEl = document.createElement("p");
+    vocabCountEl.id = "vocabCount";
+    vocabCountEl.style.marginBottom = "20px";
+    vocabCountEl.style.color = "#666";
+    vocabCountEl.style.fontWeight = "bold";
+    vocabList.before(vocabCountEl); // tambah di atas senarai
+  
     window.addWord = async () => {
       const en = document.getElementById("wordEn").value.trim().toLowerCase();
       const ms = document.getElementById("wordMs").value.trim().toLowerCase();
       const ko = document.getElementById("wordKo").value.trim();
-
+  
       if (!en || !ms || !ko) {
         alert("⚠️ Please fill in all fields.");
         return;
       }
-
+  
       const docRef = doc(db, "translations", en);
-
+  
       const existing = await getDoc(docRef);
       if (existing.exists()) {
         alert(`⚠️ Word "${en}" already exists.`);
         return;
       }
-
+  
       try {
         await setDoc(docRef, { en, ms, ko });
         alert("✅ Word added!");
@@ -137,10 +146,12 @@
         alert("Failed to add word.");
       }
     };
-
+  
     async function loadWords() {
       vocabList.innerHTML = "";
       const snapshot = await getDocs(collection(db, "translations"));
+      let count = 0;
+  
       snapshot.forEach((doc) => {
         const data = doc.data();
         const div = document.createElement("div");
@@ -153,9 +164,12 @@
           </div>
         `;
         vocabList.appendChild(div);
+        count++;
       });
+  
+      vocabCountEl.textContent = `📚 Total Vocabulary: ${count}`;
     }
-
+  
     searchInput.addEventListener("input", () => {
       const filter = searchInput.value.toLowerCase();
       const cards = vocabList.querySelectorAll(".word-card");
@@ -164,8 +178,9 @@
         card.style.display = text.includes(filter) ? "" : "none";
       });
     });
-
+  
     loadWords();
   </script>
+  
 </body>
 </html>
