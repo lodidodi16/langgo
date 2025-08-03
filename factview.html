@@ -45,6 +45,15 @@
       border-radius: 10px;
       border: 1px solid #ccc;
     }
+
+    .word.translated {
+  background-color: #ffe066; /* hijau lembut */
+  font-weight: bold;
+}
+.word.untranslated {
+  background-color: #f0f0f0; /* kelabu lembut */
+  opacity: 0.6;
+}
   </style>
 </head>
 <body>
@@ -68,8 +77,10 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-    import { getFirestore, collection, doc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
-
+    import {
+      getFirestore, collection, doc, getDoc, getDocs, setDoc
+    } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+  
     const firebaseConfig = {
       apiKey: "AIzaSyCY685VUp-3SDJZcfbIwRFD20QXKIvyuD8",
       authDomain: "langgo-4bb3a.firebaseapp.com",
@@ -78,70 +89,164 @@
       messagingSenderId: "741690694912",
       appId: "1:741690694912:web:027b883b74e5fe217ca7e5"
     };
-
+  
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-
+  
     const factDisplay = document.getElementById("factDisplay");
     const translationBox = document.getElementById("translationBox");
-
-    // Get fact ID from URL
+  
     const params = new URLSearchParams(window.location.search);
     const factId = params.get("id");
-
+  
     // Load and display fact
     async function loadFact() {
       if (!factId) {
         factDisplay.textContent = "No fact selected.";
         return;
       }
-
+  
       const docRef = doc(db, "facts", factId);
       const docSnap = await getDoc(docRef);
-
+  
       if (!docSnap.exists()) {
         factDisplay.textContent = "Fact not found.";
         return;
       }
-
+  
       const data = docSnap.data();
       const text = data.content || "";
-
-      // Wrap each word in a span
+  
+      const translationSnapshot = await getDocs(collection(db, "translations"));
+      const translatedWords = new Set();
+      translationSnapshot.forEach(doc => {
+        const d = doc.data();
+        if (d.en) translatedWords.add(d.en.toLowerCase());
+        if (d.ms) translatedWords.add(d.ms.toLowerCase());
+        if (d.ko) translatedWords.add(d.ko.toLowerCase());
+      });
+  
       const formatted = text.split(/(\s+)/).map(part => {
         if (part.trim() === "") return part;
-        return `<span class="word" onclick="translateWord('${part.replace(/'/g, "\\'")}')">${part}</span>`;
+        const cleanWord = part.replace(/[.,!?;:()"'”“]/g, "").toLowerCase();
+        const hasTranslation = translatedWords.has(cleanWord);
+        const className = hasTranslation ? "word translated" : "word untranslated";
+        return `<span class="${className}" onclick="translateWord('${part.replace(/'/g, "\\'")}')">${part}</span>`;
       }).join("");
-
+  
       factDisplay.innerHTML = formatted;
     }
+  
+    // GLOBAL FUNCTION - Translate or add
+    window.translateWord = async function (word) {
+  const querySnapshot = await getDocs(collection(db, "translations"));
+  let found = false;
+  let docId = "";
+  let translationData = null;
 
-    // Make translation function global
-    window.translateWord = async function(word) {
-      const querySnapshot = await getDocs(collection(db, "translations"));
-      let found = false;
-      translationBox.innerHTML = `<strong>Searching for:</strong> ${word}`;
+  const cleanWord = word.replace(/[.,!?;:()"'”“]/g, "").toLowerCase();
 
-      querySnapshot.forEach(doc => {
-        const data = doc.data();
-        const all = [data.en, data.ms, data.ko];
-        if (all.includes(word)) {
-          translationBox.innerHTML = `
-            <strong>Word:</strong> ${word}<br>
-            🇬🇧 English: ${data.en}<br>
-            🇲🇾 Malay: ${data.ms}<br>
-            🇰🇷 Korean: ${data.ko}
-          `;
-          found = true;
+  querySnapshot.forEach(docSnap => {
+    const data = docSnap.data();
+    const values = [data.en, data.ms, data.ko].map(val => (val || "").toLowerCase());
+    if (values.includes(cleanWord)) {
+      found = true;
+      docId = docSnap.id;
+      translationData = data;
+    }
+  });
+
+  if (found) {
+    translationBox.innerHTML = `
+      <strong>Word:</strong> ${word}<br>
+      <div id="translationView">
+        🇬🇧 English: ${translationData.en}<br>
+        🇲🇾 Malay: ${translationData.ms}<br>
+        🇰🇷 Korean: ${translationData.ko}<br><br>
+        <button onclick="editTranslation('${docId}', '${word}', '${translationData.en}', '${translationData.ms}', '${translationData.ko}')">✏️ Edit</button>
+      </div>
+    `;
+  } else {
+    translationBox.innerHTML = `
+      <strong>Word:</strong> ${word}<br>
+      ❌ No translation found.<br><br>
+      <label>🇬🇧 English: <input type="text" id="en-${cleanWord}"></label><br>
+      <label>🇲🇾 Malay: <input type="text" id="ms-${cleanWord}"></label><br>
+      <label>🇰🇷 Korean: <input type="text" id="ko-${cleanWord}"></label><br><br>
+      <button onclick="addNewTranslation('${cleanWord}', '${word}')">➕ Add Translation</button>
+    `;
+  }
+};
+
+window.editTranslation = function(docId, word, en, ms, ko) {
+  translationBox.innerHTML = `
+    <strong>Edit Translation for:</strong> ${word}<br><br>
+    <label>🇬🇧 English: <input type="text" id="edit-en" value="${en}"></label><br>
+    <label>🇲🇾 Malay: <input type="text" id="edit-ms" value="${ms}"></label><br>
+    <label>🇰🇷 Korean: <input type="text" id="edit-ko" value="${ko}"></label><br><br>
+    <button onclick="saveTranslation('${docId}', '${word}')">💾 Save</button>
+  `;
+};
+
+window.saveTranslation = async function(docId, word) {
+  const newEn = document.getElementById("edit-en").value.trim();
+  const newMs = document.getElementById("edit-ms").value.trim();
+  const newKo = document.getElementById("edit-ko").value.trim();
+
+  const docRef = doc(db, "translations", docId);
+  await setDoc(docRef, {
+    en: newEn,
+    ms: newMs,
+    ko: newKo
+  });
+
+  translationBox.innerHTML = `
+    ✅ Translation updated!<br>
+    🇬🇧 English: ${newEn}<br>
+    🇲🇾 Malay: ${newMs}<br>
+    🇰🇷 Korean: ${newKo}
+  `;
+};
+  
+    // GLOBAL FUNCTION - Add translation
+    window.addNewTranslation = async function (cleanWord, originalWord) {
+      const en = document.getElementById(`en-${cleanWord}`).value.trim();
+      const ms = document.getElementById(`ms-${cleanWord}`).value.trim();
+      const ko = document.getElementById(`ko-${cleanWord}`).value.trim();
+  
+      if (!en && !ms && !ko) {
+        alert("Please enter at least one translation.");
+        return;
+      }
+  
+      const data = {
+        en: en || originalWord,
+        ms: ms || originalWord,
+        ko: ko || originalWord,
+      };
+  
+      const docRef = doc(db, "translations", cleanWord);
+      await setDoc(docRef, data);
+  
+      translationBox.innerHTML = `
+        ✅ Translation added!<br>
+        🇬🇧 English: ${data.en}<br>
+        🇲🇾 Malay: ${data.ms}<br>
+        🇰🇷 Korean: ${data.ko}
+      `;
+  
+      // Tukar warna perkataan di skrin
+      const spans = document.querySelectorAll("span.word");
+      spans.forEach(span => {
+        const spanWord = span.textContent.replace(/[.,!?;:()"'”“]/g, "").toLowerCase();
+        if (spanWord === cleanWord) {
+          span.classList.remove("untranslated");
+          span.classList.add("translated");
         }
       });
-
-      if (!found) {
-        translationBox.innerHTML = `<strong>Word:</strong> ${word}<br>🔍 No translation found in database.`;
-      }
     };
-
+  
     loadFact();
-  </script>
+  </script>  
 </body>
 </html>
