@@ -37,7 +37,7 @@
         <li><a href="index.html">Translate</a></li>
         <li><a href="add.html">Vocabulary</a></li>
         <li><a class="active" href="lyrics.html">Lyrics</a></li>
-        <li><a href="flashcard.html">Flashcard</li>
+        <li><a href="flashcard.html">Flashcard</a></li>
         <li><a href="fact.html">Fact</a></li>
       </ul>
     </nav>
@@ -48,11 +48,21 @@
           <option value="en">English</option>
           <option value="ms">Malay</option>
           <option value="ko">Korean</option>
+          <option value="fil">Filipino</option>
+          <option value="de">German</option>
+          <option value="zh">Chinese</option>
+          <option value="ja">Japanese</option>
+          <option value="fr">French</option>
         </select>
         <select id="toLang">
           <option value="ms">Malay</option>
           <option value="ko">Korean</option>
           <option value="en">English</option>
+          <option value="fil">Filipino</option>
+          <option value="de">German</option>
+          <option value="zh">Chinese</option>
+          <option value="ja">Japanese</option>
+          <option value="fr">French</option>
         </select>
         <button onclick="translateLyrics()">Translate</button>
         <div id="translatedWords" style="margin-top: 20px;"></div>
@@ -167,6 +177,11 @@
               <input type="text" placeholder="English" id="add-en-${cleanWord}" /><br/>
               <input type="text" placeholder="Malay" id="add-ms-${cleanWord}" /><br/>
               <input type="text" placeholder="Korean" id="add-ko-${cleanWord}" /><br/>
+              <input type="text" placeholder="Filipino" id="add-fil-${cleanWord}" /><br/>
+              <input type="text" placeholder="German" id="add-de-${cleanWord}" /><br/>
+              <input type="text" placeholder="Chinese" id="add-zh-${cleanWord}" /><br/>
+              <input type="text" placeholder="Japanese" id="add-ja-${cleanWord}" /><br/>
+              <input type="text" placeholder="French" id="add-fr-${cleanWord}" /><br/>
               <button onclick="addTranslationMulti('${cleanWord}')">Add All</button>
             `;
   
@@ -185,6 +200,7 @@
   
     window.toggleEditBox = (id, btn) => {
       const box = document.getElementById(id);
+      const buttonText = btn.textContent;
       if (box.style.display === "none") {
         box.style.display = "block";
         btn.textContent = "Cancel";
@@ -195,7 +211,7 @@
     };
   
     window.editTranslation = async (word) => {
-      const langs = ["en", "ms", "ko"];
+      const langs = ["en", "ms", "ko", "fil", "de", "zh", "ja", "fr"];
       const updates = {};
   
       langs.forEach(lang => {
@@ -222,7 +238,7 @@
     };
   
     window.addTranslationMulti = async (word) => {
-      const langs = ["en", "ms", "ko"];
+      const langs = ["en", "ms", "ko", "fil", "de", "zh", "ja", "fr"];
       const data = {};
   
       for (const lang of langs) {
@@ -282,7 +298,6 @@
         });
       }
     });
-  </script>  
-  
+  </script>
 </body>
 </html>
