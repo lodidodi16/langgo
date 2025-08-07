@@ -44,14 +44,6 @@
     .addBtn:hover {
       background-color: #fdd835;
     }
-
-    canvas {
-  background: #fff;
-  cursor: crosshair;
-  margin-top: 10px;
-  margin-bottom: 10px;
-}
-
   </style>
 </head>
 <body>
@@ -74,12 +66,22 @@
             <option value="en">English</option>
             <option value="ms">Malay</option>
             <option value="ko">Korean</option>
+            <option value="tl">Filipino</option>
+            <option value="de">German</option> <!-- Added German -->
+            <option value="fr">French</option> <!-- Added French -->
+            <option value="zh">Chinese</option> <!-- Added Chinese -->
+            <option value="ja">Japanese</option> <!-- Added Japanese -->
           </select>
           <span class="swap">⇄</span>
           <select id="toLang">
             <option value="ms">Malay</option>
             <option value="en">English</option>
             <option value="ko">Korean</option>
+            <option value="tl">Filipino</option>
+            <option value="de">German</option> <!-- Added German -->
+            <option value="fr">French</option> <!-- Added French -->
+            <option value="zh">Chinese</option> <!-- Added Chinese -->
+            <option value="ja">Japanese</option> <!-- Added Japanese -->
           </select>
         </div>
         <textarea id="inputText" placeholder="Type your sentence..."></textarea>
@@ -89,9 +91,7 @@
     </main>
   </div>
 
-  <!-- sama dengan HTML kamu sekarang sampai <script type="module"> -->
-
-<script type="module">
+  <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
     import {
       getFirestore, collection, addDoc, getDocs, query, where, updateDoc
@@ -127,7 +127,7 @@
         let docId = null;
   
         // Try to find the doc in any language field
-        const tryFields = ['en', 'ms', 'ko'];
+        const tryFields = ['en', 'ms', 'ko', 'tl', 'de', 'fr', 'zh', 'ja']; // Added new languages
         for (const field of tryFields) {
           const q = query(collection(db, "translations"), where(field, "==", word));
           const snap = await getDocs(q);
@@ -177,7 +177,7 @@
           let ref = null;
   
           // Search again in case we need doc ID
-          for (const field of ['en', 'ms', 'ko']) {
+          for (const field of ['en', 'ms', 'ko', 'tl', 'de', 'fr', 'zh', 'ja']) { // Added new languages
             const q = query(collection(db, "translations"), where(field, "==", word));
             const snap = await getDocs(q);
             if (!snap.empty) {
