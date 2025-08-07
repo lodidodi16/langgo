@@ -55,30 +55,6 @@
       font-weight: bold;
       color: #555;
     }
-
-    #vocabControls button {
-  padding: 8px 12px;
-  font-size: 13px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  background-color: #fffacd;
-  box-shadow: 2px 2px 4px rgba(0,0,0,0.15);
-  cursor: pointer;
-  transition: 0.2s ease;
-  width: fit-content;         /* penting: biar ikut kandungan */
-  min-width: 60px;            /* elak jadi terlalu sempit */
-  margin: 0 6px;              /* bagi ruang antara prev & next */
-}
-
-#vocabControls button:hover:not(:disabled) {
-  background-color: #fff89a;
-}
-
-#vocabControls button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
   </style>
 </head>
 <body>
@@ -99,6 +75,11 @@
         <input type="text" id="wordEn" placeholder="English (eat)" />
         <input type="text" id="wordMs" placeholder="Malay (makan)" />
         <input type="text" id="wordKo" placeholder="Korean (먹다)" />
+        <input type="text" id="wordTl" placeholder="Filipino (kain)" /> <!-- Added Filipino -->
+        <input type="text" id="wordDe" placeholder="German (essen)" /> <!-- Added German -->
+        <input type="text" id="wordFr" placeholder="French (manger)" /> <!-- Added French -->
+        <input type="text" id="wordZh" placeholder="Chinese (吃)" /> <!-- Added Chinese -->
+        <input type="text" id="wordJa" placeholder="Japanese (食べる)" /> <!-- Added Japanese -->
         <button onclick="addWord()">Add Vocabulary</button>
       </div>
 
@@ -106,8 +87,6 @@
       <input type="text" id="searchInput" placeholder="Search words..." />
 
       <p id="vocabCount" style="margin-bottom: 20px; color: #666; font-weight: bold;"></p>
-<div id="vocabList"></div>
-
       <div id="vocabList"></div>
 
       <div id="vocabControls" style="margin: 20px 0; display: flex; gap: 10px; align-items: center;">
@@ -115,8 +94,6 @@
         <span id="pageInfo"></span>
         <button id="nextPage">➡️ Next</button>
       </div>
-      <div id="vocabList"></div>
-      
     </main>
   </div>
 
@@ -143,27 +120,28 @@
     const searchInput = document.getElementById("searchInput");
     const vocabCountEl = document.createElement("p");
     vocabCountEl.id = "vocabCount";
-    vocabList.before(vocabCountEl);
-  
-    const prevBtn = document.getElementById("prevPage");
-    const nextBtn = document.getElementById("nextPage");
-    const pageInfo = document.getElementById("pageInfo");
-  
-    let allVocab = [];
-    let currentPage = 1;
-    const itemsPerPage = 10;
+    vocabCountEl.style.marginBottom = "20px";
+    vocabCountEl.style.color = "#666";
+    vocabCountEl.style.fontWeight = "bold";
+    vocabList.before(vocabCountEl); // add above the list
   
     window.addWord = async () => {
       const en = document.getElementById("wordEn").value.trim().toLowerCase();
       const ms = document.getElementById("wordMs").value.trim().toLowerCase();
       const ko = document.getElementById("wordKo").value.trim();
-  
-      if (!en || !ms || !ko) {
+      const tl = document.getElementById("wordTl").value.trim();
+      const de = document.getElementById("wordDe").value.trim();
+      const fr = document.getElementById("wordFr").value.trim();
+      const zh = document.getElementById("wordZh").value.trim();
+      const ja = document.getElementById("wordJa").value.trim();
+
+      if (!en || !ms || !ko || !tl || !de || !fr || !zh || !ja) {
         alert("⚠️ Please fill in all fields.");
         return;
       }
   
       const docRef = doc(db, "translations", en);
+  
       const existing = await getDoc(docRef);
       if (existing.exists()) {
         alert(`⚠️ Word "${en}" already exists.`);
@@ -171,12 +149,17 @@
       }
   
       try {
-        await setDoc(docRef, { en, ms, ko });
+        await setDoc(docRef, { en, ms, ko, tl, de, fr, zh, ja });
         alert("✅ Word added!");
         document.getElementById("wordEn").value = "";
         document.getElementById("wordMs").value = "";
         document.getElementById("wordKo").value = "";
-        await loadWords(); // reload after adding
+        document.getElementById("wordTl").value = "";
+        document.getElementById("wordDe").value = "";
+        document.getElementById("wordFr").value = "";
+        document.getElementById("wordZh").value = "";
+        document.getElementById("wordJa").value = "";
+        loadWords();
       } catch (error) {
         console.error("❌ Error:", error);
         alert("Failed to add word.");
@@ -186,19 +169,10 @@
     async function loadWords() {
       vocabList.innerHTML = "";
       const snapshot = await getDocs(collection(db, "translations"));
-      allVocab = snapshot.docs.map(doc => doc.data());
-      vocabCountEl.textContent = `📚 Total Vocabulary: ${allVocab.length}`;
-      currentPage = 1;
-      renderPage();
-    }
+      let count = 0;
   
-    function renderPage() {
-      vocabList.innerHTML = "";
-      const start = (currentPage - 1) * itemsPerPage;
-      const end = start + itemsPerPage;
-      const pageItems = allVocab.slice(start, end);
-  
-      pageItems.forEach(data => {
+      snapshot.forEach((doc) => {
+        const data = doc.data();
         const div = document.createElement("div");
         div.className = "word-card";
         div.innerHTML = `
@@ -206,69 +180,30 @@
             <span><strong>EN:</strong> ${data.en}</span>
             <span><strong>MS:</strong> ${data.ms}</span>
             <span><strong>KO:</strong> ${data.ko}</span>
+            <span><strong>TL:</strong> ${data.tl}</span> <!-- Added Filipino -->
+            <span><strong>DE:</strong> ${data.de}</span> <!-- Added German -->
+            <span><strong>FR:</strong> ${data.fr}</span> <!-- Added French -->
+            <span><strong>ZH:</strong> ${data.zh}</span> <!-- Added Chinese -->
+            <span><strong>JA:</strong> ${data.ja}</span> <!-- Added Japanese -->
           </div>
         `;
         vocabList.appendChild(div);
+        count++;
       });
   
-      const totalPages = Math.ceil(allVocab.length / itemsPerPage);
-      pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-      prevBtn.disabled = currentPage === 1;
-      nextBtn.disabled = currentPage === totalPages;
+      vocabCountEl.textContent = `📚 Total Vocabulary: ${count}`;
     }
   
-    prevBtn.addEventListener("click", () => {
-      if (currentPage > 1) {
-        currentPage--;
-        renderPage();
-      }
-    });
-  
-    nextBtn.addEventListener("click", () => {
-      const totalPages = Math.ceil(allVocab.length / itemsPerPage);
-      if (currentPage < totalPages) {
-        currentPage++;
-        renderPage();
-      }
-    });
-  
     searchInput.addEventListener("input", () => {
-  const filter = searchInput.value.toLowerCase();
-
-  if (filter === "") {
-    renderPage(); // kalau kosong, reset ke paginate biasa
-    return;
-  }
-
-  const filtered = allVocab.filter(data => {
-    return (
-      data.en.includes(filter) ||
-      data.ms.includes(filter) ||
-      data.ko.includes(filter)
-    );
-  });
-
-  vocabList.innerHTML = "";
-  filtered.forEach(data => {
-    const div = document.createElement("div");
-    div.className = "word-card";
-    div.innerHTML = `
-      <div class="word-entry">
-        <span><strong>EN:</strong> ${data.en}</span>
-        <span><strong>MS:</strong> ${data.ms}</span>
-        <span><strong>KO:</strong> ${data.ko}</span>
-      </div>
-    `;
-    vocabList.appendChild(div);
-  });
-
-  pageInfo.textContent = `🔍 Showing ${filtered.length} result(s)`;
-  prevBtn.disabled = true;
-  nextBtn.disabled = true;
-});
+      const filter = searchInput.value.toLowerCase();
+      const cards = vocabList.querySelectorAll(".word-card");
+      cards.forEach(card => {
+        const text = card.innerText.toLowerCase();
+        card.style.display = text.includes(filter) ? "" : "none";
+      });
+    });
   
     loadWords();
-  </script>  
-  
+  </script>
 </body>
 </html>
