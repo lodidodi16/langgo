@@ -29,34 +29,38 @@
       margin: 0;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
+      margin-top: 30px;
     }
 
     #lyricsList li {
-      background-color: #fff6bf;
-      padding: 16px 20px;
+      background-color: #fff3bf;
+      padding: 12px 16px;
       border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      transition: background 0.3s, transform 0.2s;
-    }
-
-    #lyricsList li:hover {
-      background-color: #ffe066;
-      transform: translateY(-2px);
-    }
-
-    #lyricsList li a {
-      text-decoration: none;
-      font-weight: bold;
-      color: #333;
+      font-size: 14px;
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
     }
 
-    #lyricsList li a::before {
-      content: "🎵";
-      font-size: 18px;
+    #lyricsList li span {
+      font-weight: bold;
+    }
+
+    .action-buttons button {
+      font-size: 12px;
+      padding: 6px 10px;
+      margin-left: 4px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      background-color: #ffe066;
+      transition: 0.2s ease;
+    }
+
+    .action-buttons button:hover {
+      background-color: #fab005;
     }
 
     input[type="text"], textarea, select {
@@ -71,11 +75,11 @@
     }
 
     textarea {
-      min-height: 120px;
+      min-height: 100px;
       resize: vertical;
     }
 
-    button {
+    button.save {
       background-color: #ffd43b;
       border: none;
       padding: 10px 16px;
@@ -86,23 +90,8 @@
       transition: background 0.3s;
     }
 
-    button:hover {
+    button.save:hover {
       background-color: #fab005;
-    }
-
-    .filters {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
-
-    .filters input[type="text"] {
-      flex: 1;
-    }
-
-    .filters select {
-      width: 180px;
     }
   </style>
 </head>
@@ -119,27 +108,9 @@
       </ul>
     </nav>
     <main class="content">
-      <h1>🎧 Saved Lyrics</h1>
+      <h1>🎵 Lyrics Manager</h1>
 
       <div class="card">
-        <!-- 🔍 Filters -->
-        <div class="filters">
-          <input type="text" id="searchInput" placeholder="Search lyrics title..." oninput="filterLyrics()" />
-          <select id="filterCategory" onchange="filterLyrics()">
-            <option value="">All Categories</option>
-            <option value="English">English</option>
-            <option value="Malay">Malay</option>
-            <option value="Korean">Korean</option>
-            <option value="Japanese">Japanese</option>
-            <option value="Indonesian">Indonesian</option>
-          </select>
-        </div>
-
-        <ul id="lyricsList"></ul>
-      </div>
-
-      <!-- Add New Lyric -->
-      <div class="card" style="margin-top: 20px;">
         <h3>Add New Lyric</h3>
         <input type="text" id="lyricTitle" placeholder="Lyric Title" />
         <textarea id="lyricContent" placeholder="Enter full lyrics here..."></textarea>
@@ -151,15 +122,17 @@
           <option value="Japanese">Japanese</option>
           <option value="Indonesian">Indonesian</option>
         </select>
-        <button onclick="addLyric()">💾 Save Lyric</button>
+        <button class="save" onclick="addLyric()">💾 Save Lyric</button>
       </div>
+
+      <ul id="lyricsList"></ul>
     </main>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
     import {
-      getFirestore, collection, doc, setDoc, getDocs
+      getFirestore, collection, doc, setDoc, getDocs, deleteDoc
     } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -175,36 +148,27 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    let allLyrics = [];
-
     async function loadLyrics() {
       const querySnapshot = await getDocs(collection(db, "lyrics"));
-      allLyrics = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        allLyrics.push({ id: doc.id, ...data });
-      });
-      filterLyrics();
-    }
-
-    window.filterLyrics = () => {
-      const keyword = document.getElementById("searchInput").value.trim().toLowerCase();
-      const category = document.getElementById("filterCategory").value;
       const list = document.getElementById("lyricsList");
       list.innerHTML = "";
 
-      const filtered = allLyrics.filter(item => {
-        const matchTitle = item.title.toLowerCase().includes(keyword);
-        const matchCategory = !category || item.category === category;
-        return matchTitle && matchCategory;
-      });
-
-      filtered.forEach(item => {
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
         const li = document.createElement("li");
-        li.innerHTML = `<a href="view.html?id=${item.id}">${item.title} <small style="font-size: 12px; color: #888;">(${item.category})</small></a>`;
+
+        li.innerHTML = `
+          <span>${data.title} <small style="color:gray;">(${data.category})</small></span>
+          <div class="action-buttons">
+            <button onclick="location.href='view.html?id=${docSnap.id}'">View</button>
+            <button onclick="editLyric('${docSnap.id}', '${data.title}', \`${data.content.replace(/`/g, "\\`")}\`, '${data.category}')">Edit</button>
+            <button onclick="deleteLyric('${docSnap.id}')">Delete</button>
+          </div>
+        `;
+
         list.appendChild(li);
       });
-    };
+    }
 
     window.addLyric = async () => {
       const title = document.getElementById("lyricTitle").value.trim();
@@ -212,22 +176,50 @@
       const category = document.getElementById("lyricCategory").value;
 
       if (!title || !content || !category) {
-        return alert("Please fill in all fields, including category.");
+        return alert("Please fill in all fields.");
       }
 
       const id = title.toLowerCase().replace(/\s+/g, "_");
 
-      try {
-        await setDoc(doc(db, "lyrics", id), { title, content, category });
-        alert("✅ Lyric saved!");
+      await setDoc(doc(db, "lyrics", id), { title, content, category });
+      alert("✅ Lyric saved!");
+      document.getElementById("lyricTitle").value = "";
+      document.getElementById("lyricContent").value = "";
+      document.getElementById("lyricCategory").value = "";
+      loadLyrics();
+    };
+
+    window.deleteLyric = async (id) => {
+      if (confirm("Are you sure you want to delete this lyric?")) {
+        await deleteDoc(doc(db, "lyrics", id));
+        loadLyrics();
+      }
+    };
+
+    window.editLyric = async (id, title, content, category) => {
+      document.getElementById("lyricTitle").value = title;
+      document.getElementById("lyricContent").value = content;
+      document.getElementById("lyricCategory").value = category;
+
+      document.querySelector(".save").innerText = "💾 Update Lyric";
+      document.querySelector(".save").onclick = async () => {
+        const newTitle = document.getElementById("lyricTitle").value.trim();
+        const newContent = document.getElementById("lyricContent").value.trim();
+        const newCategory = document.getElementById("lyricCategory").value;
+
+        if (!newTitle || !newContent || !newCategory) return alert("Please fill in all fields.");
+
+        await setDoc(doc(db, "lyrics", id), { title: newTitle, content: newContent, category: newCategory });
+        alert("✅ Lyric updated!");
+
         document.getElementById("lyricTitle").value = "";
         document.getElementById("lyricContent").value = "";
         document.getElementById("lyricCategory").value = "";
+        document.querySelector(".save").innerText = "💾 Save Lyric";
+        document.querySelector(".save").onclick = addLyric;
+
         loadLyrics();
-      } catch (e) {
-        console.error("❌ Error saving lyric:", e);
-        alert("❌ Failed to save lyric.");
-      }
+      };
     };
 
     loadLyrics();
