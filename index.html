@@ -94,7 +94,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
     import {
-      getFirestore, collection, addDoc, getDocs, query, where, updateDoc
+      getFirestore, collection, addDoc, getDocs, query, where, updateDoc, doc
     } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
   
     const firebaseConfig = {
@@ -110,6 +110,17 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     console.log("✅ Firebase initialized");
+
+    const langList = [
+      { code: 'en', label: 'English 🇬🇧' },
+      { code: 'ms', label: 'Malay 🇲🇾' },
+      { code: 'ko', label: 'Korean 🇰🇷' },
+      { code: 'tl', label: 'Filipino 🇵🇭' },
+      { code: 'de', label: 'German 🇩🇪' },
+      { code: 'fr', label: 'French 🇫🇷' },
+      { code: 'zh', label: 'Chinese 🇨🇳' },
+      { code: 'ja', label: 'Japanese 🇯🇵' }
+    ];
   
     window.translateText = async () => {
       const from = document.getElementById("fromLang").value;
@@ -126,8 +137,7 @@
         let foundDoc = null;
         let docId = null;
   
-        // Try to find the doc in any language field
-        const tryFields = ['en', 'ms', 'ko', 'tl', 'de', 'fr', 'zh', 'ja']; // Added new languages
+        const tryFields = langList.map(l => l.code);
         for (const field of tryFields) {
           const q = query(collection(db, "translations"), where(field, "==", word));
           const snap = await getDocs(q);
@@ -143,7 +153,11 @@
           outputDiv.innerHTML += `
             <span class="clickable-word" title="${word}">
               ${word}
-              <div class="popup hidden">${translated}</div>
+              <div class="popup hidden">
+                ${translated}
+                <br/>
+                <button class="editBtn" data-docid="${docId}">Edit</button>
+              </div>
             </span>`;
         } else {
           outputDiv.innerHTML += `
@@ -163,7 +177,7 @@
         });
       });
   
-      // Event for button "Add"
+      // Event for "Add" button
       document.querySelectorAll(".addBtn").forEach(btn => {
         btn.addEventListener("click", async () => {
           const word = btn.dataset.word;
@@ -174,10 +188,8 @@
           if (!newTrans) return;
   
           let foundSnap = null;
-          let ref = null;
   
-          // Search again in case we need doc ID
-          for (const field of ['en', 'ms', 'ko', 'tl', 'de', 'fr', 'zh', 'ja']) { // Added new languages
+          for (const field of langList.map(l => l.code)) {
             const q = query(collection(db, "translations"), where(field, "==", word));
             const snap = await getDocs(q);
             if (!snap.empty) {
@@ -196,15 +208,14 @@
             alert("✅ New translation added!");
           }
   
-          translateText(); // Refresh output
+          translateText();
         });
       });
   
-      // Event for inline missing tag "(Add ms)" or "(Add ko)"
+      // Event for "(Add ms)" missing tags
       document.querySelectorAll(".missing").forEach(span => {
         span.addEventListener("click", async () => {
           const word = span.dataset.word;
-          const from = span.dataset.from;
           const to = span.dataset.to;
           const docId = span.dataset.docid;
   
@@ -212,15 +223,38 @@
           if (!newTrans) return;
   
           if (docId) {
-            const ref = collection(db, "translations").doc(docId); // fallback
-            await updateDoc(ref, { [to]: newTrans });
+            await updateDoc(doc(db, "translations", docId), { [to]: newTrans });
           }
   
           translateText();
         });
       });
+
+      // Event for "Edit" button
+      document.querySelectorAll(".editBtn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const docId = btn.dataset.docid;
+          const snap = await getDocs(query(collection(db, "translations"), where("__name__", "==", docId)));
+          if (snap.empty) return alert("❌ Document not found.");
+          
+          const data = snap.docs[0].data();
+          const updates = {};
+
+          for (const lang of langList) {
+            const current = data[lang.code] || "";
+            const newValue = prompt(`Edit ${lang.label}:`, current);
+            if (newValue !== null) {
+              updates[lang.code] = newValue.trim();
+            }
+          }
+
+          await updateDoc(doc(db, "translations", docId), updates);
+          alert("✅ All translations updated!");
+          translateText();
+        });
+      });
     };
-  </script>
+</script>
   
 </body>
 </html>
