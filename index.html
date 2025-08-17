@@ -6,43 +6,74 @@
   <title>LangGo | Translate</title>
   <link rel="stylesheet" href="style.css" />
   <style>
-    .clickable-word {
-      display: inline-block;
-      margin: 4px;
-      padding: 6px 10px;
-      border-radius: 6px;
-      background-color: #f7f7a1;
+    body {
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    .content {
+      flex: 1;
+      padding: 40px;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    #translatedWords {
+      background: #fffbea;
+      border: 1px solid #ddd;
+      padding: 20px;
+      border-radius: 12px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+
+    .word {
       cursor: pointer;
-      position: relative;
-    }
-    .popup {
-      position: absolute;
-      top: 120%;
-      left: 0;
-      background-color: #fffbe6;
-      padding: 8px;
-      border: 1px solid #ccc;
+      padding: 2px 4px;
       border-radius: 6px;
-      z-index: 10;
-      min-width: 150px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
-    .hidden {
-      display: none;
+
+    .word:hover {
+      background-color: #ffe066;
     }
-    .not-found {
+
+    #translationBox {
+      margin-top: 20px;
+      background: #f8f8ff;
+      padding: 15px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+    }
+
+    .word.translated {
+      background-color: #ffe066; /* light yellow */
+      font-weight: bold;
+    }
+    .word.untranslated {
+      background-color: #f0f0f0; /* light gray */
       opacity: 0.6;
     }
-    .addBtn {
-      margin-top: 5px;
-      background-color: #ffeb3b;
-      border: none;
-      padding: 4px 8px;
-      cursor: pointer;
-      border-radius: 4px;
+
+    textarea {
+      width: 100%;
+      min-height: 80px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      padding: 10px;
     }
-    .addBtn:hover {
-      background-color: #fdd835;
+
+    button {
+      margin-top: 10px;
+      background-color: #ffd700;
+      border: none;
+      padding: 8px 14px;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+    button:hover {
+      background-color: #f5c400;
     }
   </style>
 </head>
@@ -58,58 +89,61 @@
         <li><a href="fact.html">Fact</a></li>
       </ul>
     </nav>
+
     <main class="content">
       <h1>Translate Word</h1>
-      <div class="card">
-        <div class="language-select">
-          <select id="fromLang">
-            <option value="en">English</option>
-            <option value="ms">Malay</option>
-            <option value="ko">Korean</option>
-            <option value="tl">Filipino</option>
-            <option value="de">German</option> <!-- Added German -->
-            <option value="fr">French</option> <!-- Added French -->
-            <option value="zh">Chinese</option> <!-- Added Chinese -->
-            <option value="ja">Japanese</option> <!-- Added Japanese -->
-          </select>
-          <span class="swap">⇄</span>
-          <select id="toLang">
-            <option value="ms">Malay</option>
-            <option value="en">English</option>
-            <option value="ko">Korean</option>
-            <option value="tl">Filipino</option>
-            <option value="de">German</option> <!-- Added German -->
-            <option value="fr">French</option> <!-- Added French -->
-            <option value="zh">Chinese</option> <!-- Added Chinese -->
-            <option value="ja">Japanese</option> <!-- Added Japanese -->
-          </select>
-        </div>
+      <!-- Language selection -->
+<div>
+  <label>From: 
+    <select id="sourceLang">
+      <option value="tl">Filipino 🇵🇭</option>
+      <option value="en">English 🇬🇧</option>
+      <option value="ms">Malay 🇲🇾</option>
+      <option value="ko">Korean 🇰🇷</option>
+      <option value="de">German 🇩🇪</option>
+      <option value="fr">French 🇫🇷</option>
+      <option value="zh">Chinese 🇨🇳</option>
+      <option value="ja">Japanese 🇯🇵</option>
+    </select>
+  </label>
+
+  <label>To: 
+    <select id="targetLang">
+      <option value="en">English 🇬🇧</option>
+      <option value="ms">Malay 🇲🇾</option>
+      <option value="ko">Korean 🇰🇷</option>
+      <option value="tl">Filipino 🇵🇭</option>
+      <option value="de">German 🇩🇪</option>
+      <option value="fr">French 🇫🇷</option>
+      <option value="zh">Chinese 🇨🇳</option>
+      <option value="ja">Japanese 🇯🇵</option>
+    </select>
+  </label>
+</div>
+
         <textarea id="inputText" placeholder="Type your sentence..."></textarea>
         <button onclick="translateText()">Translate</button>
         <div id="translatedWords" class="output"></div>
+        <div id="translationBox"></div>
       </div>
     </main>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-    import {
-      getFirestore, collection, addDoc, getDocs, query, where, updateDoc, doc
-    } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
-  
+    import { getFirestore, collection, doc, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
     const firebaseConfig = {
       apiKey: "AIzaSyCY685VUp-3SDJZcfbIwRFD20QXKIvyuD8",
       authDomain: "langgo-4bb3a.firebaseapp.com",
       projectId: "langgo-4bb3a",
       storageBucket: "langgo-4bb3a.appspot.com",
       messagingSenderId: "741690694912",
-      appId: "1:741690694912:web:027b883b74e5fe217ca7e5",
-      measurementId: "G-ZFSJ67X5WF"
+      appId: "1:741690694912:web:027b883b74e5fe217ca7e5"
     };
-  
+
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    console.log("✅ Firebase initialized");
 
     const langList = [
       { code: 'en', label: 'English 🇬🇧' },
@@ -121,140 +155,128 @@
       { code: 'zh', label: 'Chinese 🇨🇳' },
       { code: 'ja', label: 'Japanese 🇯🇵' }
     ];
-  
+
+    const outputDiv = document.getElementById("translatedWords");
+    const translationBox = document.getElementById("translationBox");
+
     window.translateText = async () => {
-      const from = document.getElementById("fromLang").value;
-      const to = document.getElementById("toLang").value;
-      const input = document.getElementById("inputText").value.trim().toLowerCase();
-      const outputDiv = document.getElementById("translatedWords");
-  
+      const input = document.getElementById("inputText").value.trim();
       if (!input) return alert("Please type a sentence.");
+
       outputDiv.innerHTML = "";
-  
-      const words = input.split(" ");
-  
-      for (let word of words) {
-        let foundDoc = null;
-        let docId = null;
-  
-        const tryFields = langList.map(l => l.code);
-        for (const field of tryFields) {
-          const q = query(collection(db, "translations"), where(field, "==", word));
-          const snap = await getDocs(q);
-          if (!snap.empty) {
-            foundDoc = snap.docs[0].data();
-            docId = snap.docs[0].id;
+      translationBox.innerHTML = "";
+
+      const translationSnapshot = await getDocs(collection(db, "translations"));
+      const wordsMap = {};
+      translationSnapshot.forEach(doc => {
+        wordsMap[doc.id] = doc.data();
+      });
+
+      const formatted = input.split(/(\s+)/).map(part => {
+        if (part.trim() === "") return part;
+        const cleanWord = part.replace(/[.,!?;:()"'”“]/g, "").toLowerCase();
+        let found = false;
+        let docId = "";
+
+        for (const [id, data] of Object.entries(wordsMap)) {
+          if (Object.values(data).map(v => (v || "").toLowerCase()).includes(cleanWord)) {
+            found = true;
+            docId = id;
             break;
           }
         }
-  
-        if (foundDoc) {
-          const translated = foundDoc[to] || `<span class="missing" data-word="${word}" data-from="${from}" data-to="${to}" data-docid="${docId}">(Add ${to})</span>`;
-          outputDiv.innerHTML += `
-            <span class="clickable-word" title="${word}">
-              ${word}
-              <div class="popup hidden">
-                ${translated}
-                <br/>
-                <button class="editBtn" data-docid="${docId}">Edit</button>
-              </div>
-            </span>`;
-        } else {
-          outputDiv.innerHTML += `
-            <span class="clickable-word not-found" title="${word}">
-              ${word}
-              <div class="popup hidden">
-                <em style="opacity:0.6;">Not found</em><br/>
-                <button class="addBtn" data-word="${word}" data-from="${from}" data-to="${to}">Add</button>
-              </div>
-            </span>`;
-        }
-      }
-  
-      document.querySelectorAll(".clickable-word").forEach(el => {
-        el.addEventListener("click", () => {
-          el.querySelector(".popup").classList.toggle("hidden");
-        });
-      });
-  
-      // Event for "Add" button
-      document.querySelectorAll(".addBtn").forEach(btn => {
-        btn.addEventListener("click", async () => {
-          const word = btn.dataset.word;
-          const from = btn.dataset.from;
-          const to = btn.dataset.to;
-  
-          const newTrans = prompt(`Add translation for "${word}" in ${to}:`);
-          if (!newTrans) return;
-  
-          let foundSnap = null;
-  
-          for (const field of langList.map(l => l.code)) {
-            const q = query(collection(db, "translations"), where(field, "==", word));
-            const snap = await getDocs(q);
-            if (!snap.empty) {
-              foundSnap = snap.docs[0];
-              break;
-            }
-          }
-  
-          const newData = { [from]: word, [to]: newTrans };
-  
-          if (foundSnap) {
-            await updateDoc(foundSnap.ref, { [to]: newTrans });
-            alert("✅ Translation updated!");
-          } else {
-            await addDoc(collection(db, "translations"), newData);
-            alert("✅ New translation added!");
-          }
-  
-          translateText();
-        });
-      });
-  
-      // Event for "(Add ms)" missing tags
-      document.querySelectorAll(".missing").forEach(span => {
-        span.addEventListener("click", async () => {
-          const word = span.dataset.word;
-          const to = span.dataset.to;
-          const docId = span.dataset.docid;
-  
-          const newTrans = prompt(`Add translation for "${word}" in ${to}:`);
-          if (!newTrans) return;
-  
-          if (docId) {
-            await updateDoc(doc(db, "translations", docId), { [to]: newTrans });
-          }
-  
-          translateText();
-        });
-      });
 
-      // Event for "Edit" button
-      document.querySelectorAll(".editBtn").forEach(btn => {
-        btn.addEventListener("click", async () => {
-          const docId = btn.dataset.docid;
-          const snap = await getDocs(query(collection(db, "translations"), where("__name__", "==", docId)));
-          if (snap.empty) return alert("❌ Document not found.");
-          
-          const data = snap.docs[0].data();
-          const updates = {};
+        const className = found ? "word translated" : "word untranslated";
+        return `<span class="${className}" onclick="translateWord('${cleanWord}','${part}')">${part}</span>`;
+      }).join("");
 
-          for (const lang of langList) {
-            const current = data[lang.code] || "";
-            const newValue = prompt(`Edit ${lang.label}:`, current);
-            if (newValue !== null) {
-              updates[lang.code] = newValue.trim();
-            }
-          }
-
-          await updateDoc(doc(db, "translations", docId), updates);
-          alert("✅ All translations updated!");
-          translateText();
-        });
-      });
+      outputDiv.innerHTML = formatted;
     };
+
+    window.translateWord = async (cleanWord, originalWord) => {
+  const sourceLang = document.getElementById("sourceLang").value;
+  const targetLang = document.getElementById("targetLang").value;
+
+  const querySnapshot = await getDocs(collection(db, "translations"));
+  let found = false;
+  let docId = "";
+  let translationData = null;
+
+  querySnapshot.forEach(docSnap => {
+    const data = docSnap.data();
+    // Check if word exists in ANY language array
+    for (const [lang, values] of Object.entries(data)) {
+      const arr = Array.isArray(values) ? values : [values];
+      if (arr.map(v => v.toLowerCase()).includes(cleanWord)) {
+        found = true;
+        docId = docSnap.id;
+        translationData = data;
+        break;
+      }
+    }
+  });
+
+  if (found) {
+    const targetTranslations = translationData[targetLang];
+    const displayText = targetTranslations
+      ? (Array.isArray(targetTranslations) ? targetTranslations.join(", ") : targetTranslations)
+      : "❌ Not available";
+
+    translationBox.innerHTML = `
+      <strong>Word:</strong> ${originalWord}<br>
+      <strong>${langList.find(l => l.code === targetLang).label}:</strong> 
+      ${displayText}
+      <br><br>
+      <button onclick="editTranslation('${docId}','${originalWord}')">✏️ Edit</button>
+    `;
+  } else {
+    translationBox.innerHTML = `
+      <strong>Word:</strong> ${originalWord}<br>
+      ❌ No translation found.<br><br>
+      ${langList.map(l => `<label>${l.label}: 
+        <input type="text" id="${l.code}-${cleanWord}" placeholder="Separate multiple with commas">
+      </label><br>`).join("")}
+      <br><button onclick="addNewTranslation('${cleanWord}','${originalWord}')">➕ Add Translation</button>
+    `;
+  }
+};
+
+window.editTranslation = async (docId, word) => {
+  const docSnap = (await getDocs(collection(db, "translations"))).docs.find(d => d.id === docId);
+  if (!docSnap) return;
+  const data = docSnap.data();
+
+  translationBox.innerHTML = `
+    <strong>Edit Translation for:</strong> ${word}<br><br>
+    ${langList.map(l => {
+      const values = data[l.code];
+      const valueStr = Array.isArray(values) ? values.join(", ") : (values || "");
+      return `<label>${l.label}: 
+        <input type="text" id="edit-${l.code}" value="${valueStr}" placeholder="Separate multiple with commas">
+      </label><br>`;
+    }).join("")}
+    <br><button onclick="saveTranslation('${docId}')">💾 Save</button>
+  `;
+};
+
+window.saveTranslation = async (docId) => {
+  const updates = {};
+  langList.forEach(l => {
+    const val = document.getElementById("edit-" + l.code).value.trim();
+    updates[l.code] = val ? val.split(",").map(v => v.trim()) : [];
+  });
+  await setDoc(doc(db, "translations", docId), updates);
+  translationBox.innerHTML = "✅ Translation updated!";
+};
+
+window.addNewTranslation = async (cleanWord, originalWord) => {
+  const data = {};
+  langList.forEach(l => {
+    const val = document.getElementById(`${l.code}-${cleanWord}`).value.trim();
+    data[l.code] = val ? val.split(",").map(v => v.trim()) : [];
+  });
+  await setDoc(doc(db, "translations", cleanWord), data);
+  translationBox.innerHTML = "✅ Translation added!";
+};
 </script>
-  
-</body>
-</html>
+</body></html>
